@@ -5,7 +5,16 @@ Spyder Editor
 This is a temporary script file.
 """
 
-for i in range(1,10):
-    print(i)
-    
-    
+
+
+
+import warnings
+warnings.filterwarnings('ignore')
+
+
+
+import pandas as pd
+
+
+data = pd.read_excel('/Users/yuchenzhou/Desktop/DataTask.xlsx')
+data.head()
