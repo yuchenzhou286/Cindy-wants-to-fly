@@ -1,0 +1,210 @@
+---
+title: "part2"
+output: html_document
+---
+```{r}
+library(readr)
+library(tidyverse)
+```
+
+```{r}
+spotify_songs <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-01-21/spotify_songs.csv')
+```
+
+# 2 artists by play_lists
+```{r}
+spotify_songs$playlist_name <- factor(spotify_songs$playlist_name)
+```
+
+```{r}
+library(arules)
+## create a list of baskets: vectors of artists by playlist_name
+## split data into a list of artists for each user
+artistlists <- split(x=spotify_songs$track_artist, f=spotify_songs$playlist_name)
+```
+
+```{r}
+artistlists[[1]]
+```
+
+```{r}
+## re-move artist repetition in these lists
+artistlists <- lapply(artistlists, unique)
+```
+
+```{r}
+#treat this as a special arules `transactions' class.
+artisttrans <- as(artistlists, "transactions")
+dim(artisttrans)
+
+# 449 play lists 
+# 10692 artists
+```
+
+```{r}
+## apply the actual 'apriori' algorithm
+# we look at only rules with support > .01 & confidence >.5 & length (# artists) <= 3
+artistrules <- apriori(artisttrans, 
+	parameter=list(support=.01, confidence=.5, maxlen=3))
+```
+
+```{r}
+## extract the rules as strings, then change into an edge matrix
+pairs2 <- labels(artistrules)
+
+pairs2 <- gsub("\\{|\\}","",pairs2)
+
+pairs2 <- strsplit(pairs2," => ")
+
+pairs2 <- do.call(rbind,pairs2)
+
+pairs2 <- pairs2[pairs2[,1]!="",] # no lhs
+```
+
+## plot
+```{r}
+library(igraph)
+artistnet <- graph.edgelist(pairs2)
+artistnet <- as.undirected(artistnet)
+V(artistnet)$color <- "cyan"
+plot(artistnet, vertex.label=NA, vertex.size=3, edge.curved=FALSE)
+
+```
+
+```{r}
+## look at some measures of connectivity
+abetween <- betweenness(artistnet)
+adegree <- degree(artistnet)
+which.max(abetween)
+which.max(adegree)
+```
+
+```{r}
+# find the top ten betweeness
+sort(abetween,decreasing = T)[1:10]
+```
+
+```{r}
+sort(adegree,decreasing = T)[1:10]
+```
+
+```{r}
+adegree['Drake']
+adegree['Martin Garrix']
+adegree['The Chainsmokers']
+adegree['David Guetta']
+adegree['Calvin Harris'] 
+adegree['DJ Snake']
+adegree['Pitbull']
+adegree['Major Lazer']
+adegree['Daddy Yankee']
+adegree['Ozuna']
+```
+
+```{r}
+## raw popularity
+artistcount <- table(spotify_songs$track_artist )[names(adegree)]
+## they're all closely related? 
+plot(adegree,abetween,log="xy")
+plot(as.numeric(artistcount),adegree,log="xy")
+```
+## who are the most popular?
+```{r}
+## count the number of appearences by actor
+artists <- as.data.frame(spotify_songs$track_artist)
+sort(table(artists),decreasing=TRUE)[1:10]
+```
+
+
+
+
+## neighborhood of artists
+```{r}
+### 1) Martin Garrix
+
+singer <- "Martin Garrix" 
+nei <- graph.neighborhood(artistnet, 1, V(artistnet)[singer])[[1]]
+V(nei)$color = "pink"
+V(nei)[singer]$color <- "blue"
+V(nei)$label.color = "black"
+V(nei)$frame.color = NA
+plot(nei, edge.curved=FALSE,edge.arrow.width=0,
+     vertex.label=NA, vertex.frame.color=0, vertex.size=4)
+V(nei)
+```
+
+
+
+```{r}
+### 2) Queen
+singer <- "Queen" 
+nei <- graph.neighborhood(artistnet, 1, V(artistnet)[singer])[[1]]
+V(nei)$color = "pink"
+V(nei)[singer]$color <- "blue"
+V(nei)$label.color = "black"
+V(nei)$frame.color = NA
+plot(nei, edge.curved=FALSE,edge.arrow.width=0,
+     vertex.label=NA, vertex.frame.color=0, vertex.size=4)
+V(nei)
+```
+```{r}
+### 3) The Chainsmokers
+
+singer <- "The Chainsmokers" 
+nei <- graph.neighborhood(artistnet, 1, V(artistnet)[singer])[[1]]
+V(nei)$color = "pink"
+V(nei)[singer]$color <- "blue"
+V(nei)$label.color = "black"
+V(nei)$frame.color = NA
+plot(nei, edge.curved=FALSE,edge.arrow.width=0,
+     vertex.label=NA, vertex.frame.color=0, vertex.size=4)
+V(nei)
+```
+
+```{r}
+### 4) David Guetta
+
+singer <- "David Guetta" 
+nei <- graph.neighborhood(artistnet, 1, V(artistnet)[singer])[[1]]
+V(nei)$color = "pink"
+V(nei)[singer]$color <- "blue"
+V(nei)$label.color = "black"
+V(nei)$frame.color = NA
+plot(nei, edge.curved=FALSE,edge.arrow.width=0,
+     vertex.label=NA, vertex.frame.color=0, vertex.size=4)
+V(nei)
+```
+```{r}
+### 5) Don Omar
+
+singer <- "Don Omar" 
+nei <- graph.neighborhood(artistnet, 1, V(artistnet)[singer])[[1]]
+V(nei)$color = "pink"
+V(nei)[singer]$color <- "blue"
+V(nei)$label.color = "black"
+V(nei)$frame.color = NA
+plot(nei, edge.curved=FALSE,edge.arrow.width=0,
+     vertex.label=NA, vertex.frame.color=0, vertex.size=4)
+V(nei)
+```
+```{r}
+### 6) Drake
+
+singer <- "Drake" 
+nei <- graph.neighborhood(artistnet, 1, V(artistnet)[singer])[[1]]
+V(nei)$color = "pink"
+V(nei)[singer]$color <- "blue"
+V(nei)$label.color = "black"
+V(nei)$frame.color = NA
+plot(nei, edge.curved=FALSE,edge.arrow.width=0,
+     vertex.label=NA, vertex.frame.color=0, vertex.size=4)
+V(nei)
+```
+## association
+```{r}
+artistrules <- apriori(artisttrans, 
+	parameter=list(support=.01, confidence=.5, maxlen=3))
+inspect(artistrules)
+summary(artistrules)
+```
+

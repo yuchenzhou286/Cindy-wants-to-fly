@@ -1,0 +1,178 @@
+---
+title: "part 3"
+output: html_document
+---
+
+```{r}
+library(readr)
+library(tidyverse)
+```
+
+```{r}
+spotify_songs <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-01-21/spotify_songs.csv')
+```
+
+# track album name by playlist
+```{r}
+spotify_songs$playlist_name <- factor(spotify_songs$playlist_name)
+```
+
+```{r}
+library(arules)
+# split data into a list of artists for each user
+tracklists <- split(x=spotify_songs$track_album_name, f=spotify_songs$playlist_name)
+tracklists[[1]]
+```
+
+```{r}
+## re-move artist repetition in these lists
+tracklists <- lapply(tracklists, unique)
+```
+
+```{r}
+#treat this as a special arules `transactions' class.
+tracktrans <- as(tracklists, "transactions")
+dim(tracktrans)
+
+# 449 playlists
+# 19743 track_album_name
+```
+
+```{r}
+##  'apriori' algorithm
+# we look at only rules with support > .01 & confidence >.5 & length (# artists) <= 3
+trackrules <- apriori(tracktrans, 
+	parameter=list(support=.01, confidence=.5, maxlen=3))
+```
+
+```{r}
+## extract the rules as strings, then change into an edge matrix
+pairs3 <- labels(trackrules)
+
+pairs3 <- gsub("\\{|\\}","",pairs3)
+
+pairs3 <- strsplit(pairs3," => ")
+
+pairs3 <- do.call(rbind,pairs3)
+
+pairs3 <- pairs3[pairs3[,1]!="",] # no lhs
+```
+
+## plot
+```{r}
+library(igraph)
+albnet <- graph.edgelist(pairs3)
+albnet <- as.undirected(albnet)
+V(albnet)$color <- "cyan"
+plot(albnet, vertex.label=NA, vertex.size=3, edge.curved=FALSE)
+
+```
+
+```{r}
+## look at some measures of connectivity
+albbetween <- betweenness(albnet)
+albdegree <- degree(albnet)
+which.max(albbetween)
+which.max(albdegree)
+```
+
+```{r}
+# find the top ten betweeness
+sort(albbetween,decreasing = T)[1:10]
+```
+
+```{r}
+sort(albdegree,decreasing = T)[1:10]
+```
+
+
+```{r}
+albdegree['Greatest Hits']
+albdegree['The Documentary']
+albdegree['JACKBOYS']
+albdegree['Please Excuse Me For Being Antisocial']
+albdegree["Hollywood's Bleeding"]
+albdegree['2001 (Explicit Version)']
+albdegree["Get Rich Or Die Tryin'"]
+albdegree['Doggystyle']
+albdegree['All Eyez On Me']
+albdegree['Appetite For Destruction']
+
+```
+
+```{r}
+## raw popularity
+albcount <- table(spotify_songs$track_album_name)[names(albdegree)]
+## they're all closely related? 
+plot(albdegree,albbetween,log="xy")
+plot(as.numeric(albcount),albdegree,log="xy")
+```
+
+## which albums are the most popular?
+```{r}
+## count the number of appearences by actor
+album <- as.data.frame(spotify_songs$track_album_name)
+sort(table(album),decreasing=TRUE)[1:10]
+```
+
+## neighbors of albums (can only plot 4)
+```{r}
+### 1) Greatest Hits
+
+albm <- "Greatest Hits" 
+nei <- graph.neighborhood(albnet, 1, V(albnet)[albm])[[1]]
+V(nei)$color = "pink"
+V(nei)[albm]$color <- "blue"
+V(nei)$label.color = "black"
+V(nei)$frame.color = NA
+plot(nei, edge.curved=FALSE,edge.arrow.width=0,
+     vertex.label=NA, vertex.frame.color=0, vertex.size=4)
+V(nei)
+```
+```{r}
+### 2) Appetite For Destruction
+
+albm <- "Appetite For Destruction" 
+nei <- graph.neighborhood(albnet, 1, V(albnet)[albm])[[1]]
+V(nei)$color = "pink"
+V(nei)[albm]$color <- "blue"
+V(nei)$label.color = "black"
+V(nei)$frame.color = NA
+plot(nei, edge.curved=FALSE,edge.arrow.width=0,
+     vertex.label=NA, vertex.frame.color=0, vertex.size=4)
+V(nei)
+```
+```{r}
+### 3) Hollywood's Bleeding
+
+albm <- "Hollywood's Bleeding" 
+nei <- graph.neighborhood(albnet, 1, V(albnet)[albm])[[1]]
+V(nei)$color = "pink"
+V(nei)[albm]$color <- "blue"
+V(nei)$label.color = "black"
+V(nei)$frame.color = NA
+plot(nei, edge.curved=FALSE,edge.arrow.width=0,
+     vertex.label=NA, vertex.frame.color=0, vertex.size=4)
+V(nei)
+```
+```{r}
+### 4) Views
+
+albm <- "Views" 
+nei <- graph.neighborhood(albnet, 1, V(albnet)[albm])[[1]]
+V(nei)$color = "pink"
+V(nei)[albm]$color <- "blue"
+V(nei)$label.color = "black"
+V(nei)$frame.color = NA
+plot(nei, edge.curved=FALSE,edge.arrow.width=0,
+     vertex.label=NA, vertex.frame.color=0, vertex.size=4)
+V(nei)
+```
+## Association
+```{r}
+trackrules <- apriori(tracktrans, 
+	parameter=list(support=.01, confidence=.5, maxlen=3))
+inspect(trackrules)
+summary(trackrules)
+```
+

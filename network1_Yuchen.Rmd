@@ -1,0 +1,300 @@
+---
+title: "Network YCZ"
+output: html_document
+---
+```{r}
+library(readr)
+library(tidyverse)
+library(tidytext)
+library(ggtext)
+library(glue)
+library(gamlr)
+library(ggplot2)
+library(scales)
+library(knitr)
+```
+
+```{r}
+spotify_songs <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-01-21/spotify_songs.csv')
+```
+
+# 1 Genre and play_list
+
+```{r}
+# sort the popularity of genre
+pl_genre <- as.data.frame(spotify_songs$playlist_genre)
+sort(table(pl_genre),decreasing=TRUE)
+```
+
+```{r}
+# sort the popularity of play list
+pl_name <- as.data.frame(spotify_songs$playlist_name)
+sort(table(pl_name),decreasing=TRUE)[1:6]
+```
+
+
+
+```{r}
+spotify_songs$playlist_genre <- factor(spotify_songs$playlist_genre)
+```
+
+```{r}
+## List of play_list no.1
+subset(spotify_songs,playlist_name==2)
+```
+
+```{r}
+## Use the a-rules package for association rules
+library(arules)
+## create a list of baskets: vectors of artists by playlist_name
+## Here's how we do the formatting here:
+## split data into a list of artists for each user
+playlists <- split(x=spotify_songs$playlist_name, f=spotify_songs$playlist_genre)
+playlists[[1]]
+```
+
+
+```{r}
+
+## re-move artist repetition in these lists
+playlists <- lapply(playlists, unique)
+## tell R to treat this as a special arules `transactions' class.
+playtrans <- as(playlists, "transactions")
+dim(playtrans)
+
+# 6 play genres 
+# 449 play_lists
+```
+## association
+```{r}
+artrules <- apriori(playtrans, 
+	parameter=list(support=.001, confidence=.1, maxlen=2))
+inspect(artrules)
+summary(artrules)
+```
+
+```{r}
+artrules <- apriori(playtrans, 
+	parameter=list(support=.001, confidence=.1, maxlen=2))
+## extract the rules as strings, then change into an edge matrix
+## print pairs at each step to see what I've done
+pairs <- labels(artrules)
+pairs <- gsub("\\{|\\}","",pairs)
+pairs <- strsplit(pairs," => ")
+pairs <- do.call(rbind,pairs)
+pairs <- pairs[pairs[,1]!="",] # no lhs
+```
+
+```{r}
+head(pairs)
+```
+
+## plot the netwwork of play lists
+```{r}
+library(igraph)
+
+musicnet <- graph.edgelist(pairs)
+musicnet <- as.undirected(musicnet)
+V(musicnet)$color <- "cyan"
+plot(musicnet, vertex.label=NA, vertex.size=3, edge.curved=FALSE)
+```
+
+```{r}
+## look at some measures of connectivity
+mbetween <- betweenness(musicnet)
+mdegree <- degree(musicnet)
+which.max(mbetween)
+which.max(mdegree)
+```
+```{r}
+# find the top ten betweeness
+sort(mbetween,decreasing = T)[1:5]
+```
+
+```{r}
+# find the degree
+mdegree['2020 Hits & 2019  Hits – Top Global Tracks 🔥🔥🔥']
+mdegree['Flow Selecto']
+mdegree['Ultimate Indie Presents... Best Indie Tracks of the 2010s']
+mdegree['TOP 50 GLOBAL 2020 UPDATED WEEKLY 🌍🎶 WORLDWIDE']
+mdegree['Charts 2020 🔥Top 2020🔥Hits 2020🔥Summer 2020🔥Pop 2020🔥Popular Music🔥Clean Pop 2020🔥Sing Alongs']
+```
+
+```{r}
+## raw popularity
+playcount <- table(spotify_songs$playlist_name )[names(mdegree)]
+## they're all closely related??
+plot(mdegree,mbetween,log="xy")
+plot(as.numeric(playcount),mdegree,log="xy")
+```
+## grab the neighborhood of top-6 playlists
+```{r}
+# 1) Indie Poptimism
+
+
+plist <- "Indie Poptimism" 
+nei <- graph.neighborhood(musicnet, 1, V(musicnet)[plist])[[1]]
+V(nei)$color = "pink"
+V(nei)[plist]$color <- "blue"
+V(nei)$label.color = "black"
+V(nei)$frame.color = NA
+plot(nei, edge.curved=FALSE,edge.arrow.width=0,
+     vertex.label=NA, vertex.frame.color=0, vertex.size=4)
+V(nei)
+```
+
+```{r}
+# 2) 2020 Hits & 2019  Hits – Top Global Tracks 🔥🔥🔥
+plist <- "2020 Hits & 2019  Hits – Top Global Tracks 🔥🔥🔥" 
+nei <- graph.neighborhood(musicnet, 1, V(musicnet)[plist])[[1]]
+V(nei)$color = "pink"
+V(nei)[plist]$color <- "blue"
+V(nei)$label.color = "black"
+V(nei)$frame.color = NA
+plot(nei, edge.curved=FALSE,edge.arrow.width=0,
+     vertex.label=NA, vertex.frame.color=0, vertex.size=4)
+V(nei)
+```
+```{r}
+# 3)Permanent Wave
+plist <- "Permanent Wave" 
+nei <- graph.neighborhood(musicnet, 1, V(musicnet)[plist])[[1]]
+V(nei)$color = "pink"
+V(nei)[plist]$color <- "blue"
+V(nei)$label.color = "black"
+V(nei)$frame.color = NA
+plot(nei, edge.curved=FALSE,edge.arrow.width=0,
+     vertex.label=NA, vertex.frame.color=0, vertex.size=4)
+V(nei)
+```
+```{r}
+# 4) Hard Rock Workout
+plist <- "Hard Rock Workout" 
+nei <- graph.neighborhood(musicnet, 1, V(musicnet)[plist])[[1]]
+V(nei)$color = "pink"
+V(nei)[plist]$color <- "blue"
+V(nei)$label.color = "black"
+V(nei)$frame.color = NA
+plot(nei, edge.curved=FALSE,edge.arrow.width=0,
+     vertex.label=NA, vertex.frame.color=0, vertex.size=4)
+V(nei)
+```
+```{r}
+# 5) Ultimate Indie Presents... Best Indie Tracks of the 2010s
+plist <- "Ultimate Indie Presents... Best Indie Tracks of the 2010s" 
+nei <- graph.neighborhood(musicnet, 1, V(musicnet)[plist])[[1]]
+V(nei)$color = "pink"
+V(nei)[plist]$color <- "blue"
+V(nei)$label.color = "black"
+V(nei)$frame.color = NA
+plot(nei, edge.curved=FALSE,edge.arrow.width=0,
+     vertex.label=NA, vertex.frame.color=0, vertex.size=4)
+V(nei)
+```
+
+```{r}
+# 6) Fitness Workout Electro | House | Dance | Progressive House
+plist <- "Fitness Workout Electro | House | Dance | Progressive House" 
+nei <- graph.neighborhood(musicnet, 1, V(musicnet)[plist])[[1]]
+V(nei)$color = "pink"
+V(nei)[plist]$color <- "blue"
+V(nei)$label.color = "black"
+V(nei)$frame.color = NA
+plot(nei, edge.curved=FALSE,edge.arrow.width=0,
+     vertex.label=NA, vertex.frame.color=0, vertex.size=4)
+V(nei)
+```
+
+
+
+# 2 artists
+```{r}
+artist_genre <- as.data.frame(spotify_songs$track_artist)
+sort(table(artist_genre),decreasing=TRUE)[1:10]
+```
+
+
+```{r}
+spotify_songs$playlist_genre <- factor(spotify_songs$playlist_genre)
+```
+
+```{r}
+subset(spotify_songs,playlist_name==2)
+```
+
+```{r}
+## Use the a-rules package for association rules
+library(arules)
+## create a list of baskets: vectors of artists by playlist_name
+## Here's how we do the formatting here:
+## split data into a list of artists for each user
+artistlists <- split(x=spotify_songs$track_artist, f=spotify_songs$playlist_genre)
+artistlists[[1]]
+```
+
+```{r}
+## re-move artist repetition in these lists
+artistlists <- lapply(artistlists, unique)
+## tell R to treat this as a special arules `transactions' class.
+artisttrans <- as(artistlists, "transactions")
+dim(artisttrans)
+
+# 6 play genres 
+# 10692 artists
+```
+## association
+```{r}
+artistrules <- apriori(artisttrans, 
+	parameter=list(support=.001, confidence=.1, maxlen=2))
+inspect(artistrules)
+summary(artistrules)
+```
+
+
+
+```{r}
+artistrules <- apriori(artisttrans, 
+	parameter=list(support=.001, confidence=.1, maxlen=2))
+## extract the rules as strings, then change into an edge matrix
+## print pairs at each step to see what I've done
+pairs <- labels(artistrules)
+pairs <- gsub("\\{|\\}","",pairs)
+pairs <- strsplit(pairs," => ")
+pairs <- do.call(rbind,pairs)
+pairs <- pairs[pairs[,1]!="",] # no lhs
+```
+
+
+## plot the netwwork of play lists
+```{r}
+library(igraph)
+
+artistnet <- graph.edgelist(pairs)
+artistnet <- as.undirected(artistnet)
+V(artistnet)$color <- "cyan"
+plot(artistnet, vertex.label=NA, vertex.size=3, edge.curved=FALSE)
+```
+
+
+```{r}
+## look at some measures of connectivity
+abetween <- betweenness(artistnet)
+adegree <- degree(artistnet)
+which.max(abetween)
+which.max(adegree)
+```
+
+```{r}
+# find the top ten betweeness
+sort(abetween,decreasing = T)[1:5]
+```
+
+```{r}
+#find the degree
+adegree['']
+```
+
+```{r}
+
+```
+
