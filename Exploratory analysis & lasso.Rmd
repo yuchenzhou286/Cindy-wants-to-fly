@@ -1,0 +1,501 @@
+---
+title: "Project"
+date: "2022/5/24"
+output: html_document
+---
+
+
+```{r load package, warning = FALSE, message = FALSE}
+library(readr)
+library(tidyverse)
+library(tidytext)
+library(ggtext)
+library(glue)
+library(gamlr)
+library(ggplot2)
+library(scales)
+library(knitr)
+```
+
+```{r load data, warning = FALSE, message = FALSE}
+spotify_songs <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-01-21/spotify_songs.csv')
+```
+
+
+
+To perform some summary statistics. 
+
+```{r summary}
+spotify_songs <- spotify_songs%>%
+  distinct(track_id, .keep_all = TRUE)%>%
+  drop_na()
+dim(spotify_songs)
+#  28352 entries, 23 columns
+```
+
+To perform EDA
+
+```{r EDA}
+
+ggplot(data = spotify_songs,
+                   aes(x = track_popularity))+
+  geom_histogram(fill = "lightblue")+
+  labs(x = "Popularity Scores",
+       y = "Count",
+       title = "Summary Distribution of Popularity")+
+  theme_minimal()
+
+
+his_popu <- ggplot(data = spotify_songs,
+                   aes(x = track_popularity, fill = playlist_genre))+
+  geom_histogram()+
+  facet_wrap(vars(playlist_genre))+
+  scale_fill_viridis_d()+
+  labs(x = "Popularity Scores",
+       y = "Count",
+       title = "Summary Distrbution Popularity",
+       subtitle = "According to genre")+
+  theme_minimal()+
+  guides(fill = "none")
+his_popu
+
+his_popu_sub <- ggplot(data = spotify_songs,
+                   aes(x = track_popularity, fill = playlist_subgenre))+
+  geom_histogram()+
+  facet_wrap(vars(playlist_subgenre))+
+  scale_fill_viridis_d()+
+  labs(x = "Popularity Scores",
+       y = "Count",
+       title = "Summary Distrbution Popularity",
+       subtitle = "According to subgenre")+
+  theme_minimal()+
+  guides(fill = "none")
+his_popu_sub
+
+box_popu_gen <- ggplot(data = spotify_songs,
+                       aes(x = playlist_genre, y = track_popularity, fill = playlist_genre))+
+  geom_boxplot()+
+  scale_fill_viridis_d()+
+  labs(x = "Genre",
+       y = "Popularity Scores",
+       title = "Summary Distribution Popularity",
+       subtitle = "According to subgenre")+
+  theme_minimal()+
+  guides(fill = "none")
+box_popu_gen
+
+
+ggplot(data = spotify_songs,
+       aes(x = as.Date(track_album_release_date), y = track_popularity, color = playlist_genre))+
+  geom_point(alpha = 0.4, size = 2)+
+  facet_wrap(vars(playlist_genre))+
+  scale_color_viridis_d()+
+  labs(x = "Date",
+       y = "Popularity Scores",
+       title = "Time Trend of Song's Popularity",
+       subtitle = "According to genre")+
+  theme_minimal()+
+  guides(fill = "none")
+
+
+
+
+ggplot(data = spotify_songs,
+       aes(x = duration_ms,
+           y = track_popularity,
+           color = playlist_genre))+
+  geom_point(alpha = 0.2)+
+  facet_wrap(vars(playlist_genre))+
+  scale_color_viridis_d()+
+  scale_x_continuous(labels = label_number(suffix = "k", scale = 1e-3))+
+  labs(x = "Duration(ms)",
+       y = "Popularity Scores",
+       title = "Duration vs Popularity",
+       subtitle = "According to genre")+
+  theme_minimal()+
+  guides(color = "none")
+
+ggplot(data = spotify_songs,
+       aes(x = danceability,
+           y = track_popularity,
+           color = playlist_genre))+
+  geom_point(alpha = 0.2)+
+  facet_wrap(vars(playlist_genre))+
+  scale_color_viridis_d()+
+  #scale_x_continuous(labels = label_number(suffix = "k", scale = 1e-3))+
+  labs(x = "Danceability",
+       y = "Popularity Scores",
+       title = "Danceability vs Popularity",
+       subtitle = "According to genre",
+       caption = "Note: A value of 0.0 is least danceable and 1.0 is most danceable")+
+  theme_minimal()+
+  guides(color = "none")
+
+ggplot(data = spotify_songs,
+       aes(x = energy,
+           y = track_popularity,
+           color = playlist_genre))+
+  geom_point(alpha = 0.2)+
+  facet_wrap(vars(playlist_genre))+
+  scale_color_viridis_d()+
+  #scale_x_continuous(labels = label_number(suffix = "k", scale = 1e-3))+
+  labs(x = "Energy",
+       y = "Popularity Scores",
+       title = "Energy vs Popularity",
+       subtitle = "According to genre",
+       caption = "Note: A value of 0.0 is least energetic and 1.0 is most energetic")+
+  theme_minimal()+
+  guides(color = "none")
+
+ggplot(data = spotify_songs,
+       aes(x = key,
+           y = track_popularity,
+           color = playlist_genre))+
+  geom_point(alpha = 0.2)+
+  facet_wrap(vars(playlist_genre))+
+  scale_color_viridis_d()+
+  #scale_x_continuous(labels = label_number(suffix = "k", scale = 1e-3))+
+  labs(x = "Key",
+       y = "Popularity Scores",
+       title = "Key vs Popularity",
+       subtitle = "According to genre",
+       caption = "Note: Using standard Pitch Class notation")+
+  theme_minimal()+
+  guides(color = "none")
+
+ggplot(data = spotify_songs,
+       aes(x = loudness,
+           y = track_popularity,
+           color = playlist_genre))+
+  geom_point(alpha = 0.2)+
+  facet_wrap(vars(playlist_genre))+
+  scale_color_viridis_d()+
+  #scale_x_continuous(labels = label_number(suffix = "k", scale = 1e-3))+
+  labs(x = "Loudness(dB)",
+       y = "Popularity Scores",
+       title = "Loudness vs Popularity",
+       subtitle = "According to genre")+
+  theme_minimal()+
+  guides(color = "none")
+
+ggplot(data = spotify_songs,
+       aes(x = mode,
+           y = track_popularity,
+           color = playlist_genre))+
+  geom_point(alpha = 0.2)+
+  facet_wrap(vars(playlist_genre))+
+  scale_color_viridis_d()+
+  #scale_x_continuous(labels = label_number(suffix = "k", scale = 1e-3))+
+  labs(x = "Danceability",
+       y = "Popularity Scores",
+       title = "Danceability vs Popularity",
+       subtitle = "According to genre",
+       caption = "Note: A value of 0.0 is least danceable and 1.0 is most danceable")+
+  theme_minimal()+
+  guides(color = "none")
+
+ggplot(data = spotify_songs,
+       aes(x = speechiness,
+           y = track_popularity,
+           color = playlist_genre))+
+  geom_point(alpha = 0.2)+
+  facet_wrap(vars(playlist_genre))+
+  scale_color_viridis_d()+
+  #scale_x_continuous(labels = label_number(suffix = "k", scale = 1e-3))+
+  labs(x = "Speechiness",
+       y = "Popularity Scores",
+       title = "Speechiness vs Popularity",
+       subtitle = "According to genre",
+       caption = "Note: A value of 0.0 is least danceable and 1.0 is most danceable")+
+  theme_minimal()+
+  guides(color = "none")
+
+ggplot(data = spotify_songs,
+       aes(x = acousticness,
+           y = track_popularity,
+           color = playlist_genre))+
+  geom_point(alpha = 0.2)+
+  facet_wrap(vars(playlist_genre))+
+  scale_color_viridis_d()+
+  #scale_x_continuous(labels = label_number(suffix = "k", scale = 1e-3))+
+  labs(x = "Acousticness",
+       y = "Popularity Scores",
+       title = "Acousticness vs Popularity",
+       subtitle = "According to genre",
+       caption = "Note: A value of  1.0 is most acoustic")+
+  theme_minimal()+
+  guides(color = "none")
+
+ggplot(data = spotify_songs,
+       aes(x = instrumentalness,
+           y = track_popularity,
+           color = playlist_genre))+
+  geom_point(alpha = 0.2)+
+  facet_wrap(vars(playlist_genre))+
+  scale_color_viridis_d()+
+  #scale_x_continuous(labels = label_number(suffix = "k", scale = 1e-3))+
+  labs(x = "Instrumentalness",
+       y = "Popularity Scores",
+       title = "Instrumentalness vs Popularity",
+       subtitle = "According to genre",
+       caption = "Note: Predicts whether a track contains no vocals")+
+  theme_minimal()+
+  guides(color = "none")
+
+ggplot(data = spotify_songs,
+       aes(x = liveness,
+           y = track_popularity,
+           color = playlist_genre))+
+  geom_point(alpha = 0.2)+
+  facet_wrap(vars(playlist_genre))+
+  scale_color_viridis_d()+
+  #scale_x_continuous(labels = label_number(suffix = "k", scale = 1e-3))+
+  labs(x = "Liveness",
+       y = "Popularity Scores",
+       title = "Liveness vs Popularity",
+       subtitle = "According to genre",
+       caption = "Note: Higher liveness values represent an increased probability that the track was performed live")+
+  theme_minimal()+
+  guides(color = "none")
+
+ggplot(data = spotify_songs,
+       aes(x = valence,
+           y = track_popularity,
+           color = playlist_genre))+
+  geom_point(alpha = 0.2)+
+  facet_wrap(vars(playlist_genre))+
+  scale_color_viridis_d()+
+  #scale_x_continuous(labels = label_number(suffix = "k", scale = 1e-3))+
+  labs(x = "Valence",
+       y = "Popularity Scores",
+       title = "Valence vs Popularity",
+       subtitle = "According to genre",
+       caption = "Note: Measurement of positiveness.")+
+  theme_minimal()+
+  guides(color = "none")
+
+ggplot(data = spotify_songs,
+       aes(x = tempo,
+           y = track_popularity,
+           color = playlist_genre))+
+  geom_point(alpha = 0.2)+
+  facet_wrap(vars(playlist_genre))+
+  scale_color_viridis_d()+
+  #scale_x_continuous(labels = label_number(suffix = "k", scale = 1e-3))+
+  labs(x = "Tempo",
+       y = "Popularity Scores",
+       title = "Tempo vs Popularity",
+       subtitle = "According to genre",
+       caption = "Note: Measurement of BPM")+
+  theme_minimal()+
+  guides(color = "none")
+```
+
+
+Cleaning data:
+```{r separate text}
+source("naref.R")
+spotify_songs<-naref(spotify_songs)
+# get rid of the factor level
+
+text_dt <- spotify_songs %>%
+  select(track_album_id,track_album_name,playlist_name)%>%
+  unnest_tokens(output = sep_album_word,
+                input = track_album_name,
+                token = "words")%>%
+  unnest_tokens(output = sep_playlist_word,
+                input = playlist_name,
+                token = "words")
+
+# create a table with id, playlist_name words and number it appears
+text_playlist <- spotify_songs %>%
+  select(track_id, playlist_name) %>%
+  unnest_tokens(output = sep_playlist_word,
+                input = playlist_name,
+                token = "words")%>%
+  anti_join(stop_words, by = c("sep_playlist_word" = "word"))%>%
+  group_by(track_id)%>%
+  count(sep_playlist_word, sort = TRUE)
+
+text_playlist
+
+# make it ready for sparse matrix
+playlist_words<-unique(text_playlist$sep_playlist_word)
+doc_playlist <- text_playlist %>%
+  mutate(sep_playlist_word = match(sep_playlist_word,playlist_words),
+         id = match(track_id, spotify_songs$track_id))
+doc_playlist
+
+doc_playlist <- as.data.frame(doc_playlist)
+# sparse matrix for playlist
+spm_playlist <- sparseMatrix(i=doc_playlist[,4],
+                  j=doc_playlist[,2],
+                  x=doc_playlist[,3],
+                  dimnames=list(id=1:nrow(spotify_songs),
+                  words=playlist_words))
+dim(spm_playlist)
+# 527 cols
+
+
+# create a table with id, album name words and number it appears
+text_album <- spotify_songs %>%
+  select(track_id, track_album_name) %>%
+  unnest_tokens(output = sep_album_word,
+                input = track_album_name,
+                token = "words")%>%
+  anti_join(stop_words, by = c("sep_album_word" = "word"))%>%
+  group_by(track_id)%>%
+  count(sep_album_word, sort = TRUE)
+text_album
+
+# make it ready for sparse matrix
+album_words <- unique(text_album$sep_album_word)
+doc_album <- text_album %>%
+  mutate(sep_album_word = match(sep_album_word,album_words),
+         id = match(track_id, spotify_songs$track_id))
+doc_album
+
+# sparse matrix for album words
+doc_album <- as.data.frame(doc_album)
+spm_album <- sparseMatrix(i=doc_album[,4],
+                  j=doc_album[,2],
+                  x=doc_album[,3],
+                  dimnames=list(id=1:nrow(spotify_songs),
+                  words=album_words))
+
+dim(spm_album)
+# 28352 rows 13774 cols
+
+# create a table with id, song name words and number it appears
+text_name <- spotify_songs %>%
+  select(track_id, track_name) %>%
+  unnest_tokens(output = sep_name_word,
+                input = track_name,
+                token = "words")%>%
+  anti_join(stop_words, by = c("sep_name_word" = "word"))%>% #get rid of stop words
+  group_by(track_id)%>%
+  count(sep_name_word, sort = TRUE)
+text_name
+
+# make it ready for sparse matrix
+name_words <- unique(text_name$sep_name_word)
+doc_name <- text_name %>%
+  mutate(sep_name_word = match(sep_name_word,name_words),
+         id = match(track_id, spotify_songs$track_id))
+doc_name
+
+# sparse matrix for album words
+doc_name <- as.data.frame(doc_name)
+spm_name <- sparseMatrix(i=doc_name[,4],
+                  j=doc_name[,2],
+                  x=doc_name[,3],
+                  dimnames=list(id=1:nrow(spotify_songs),
+                  words=name_words))
+dim(spm_name)
+# 14988 cols
+
+
+# create rest of sparse matrix
+
+spm_genre <- sparse.model.matrix(~playlist_genre+playlist_subgenre, data = spotify_songs)[,-1]
+dim(spm_genre)
+# 28 cols
+
+
+continuouse_var <- spotify_songs[,12:23]
+spm_rest <- sparse.model.matrix(~., data = continuouse_var)[,-1]
+dim(spm_rest)
+# 12 cols
+
+# combine those sparse matrices
+spm_comb <- cbind(spm_album,cbind(spm_genre,cbind(spm_name,cbind(spm_playlist,spm_rest))))
+dim(spm_comb) #13774 album words + 28 genre words + 14988 song name words + 527 playlist words + 12 rest continuous variables
+# we have a 28356 rows and 29327 variables
+
+Y <- spotify_songs$track_popularity
+# This is our y value when doing LASSO
+```
+
+
+```{r Doing Lasso}
+lasso1 <- gamlr(spm_comb, Y, family = "gaussian")
+plot(lasso1)
+
+# in sample R2
+dev <- lasso1$deviance[which.min(AICc(lasso1))]
+dev0 <- lasso1$deviance[1]
+
+in_r2 <- 1-dev/dev0
+in_r2
+# in-sample R2 is around 0.3694
+
+# how many variables are selected?
+beta <- drop(coef(lasso1))
+length(beta) # intercept + 13774 album words + 28 genre words + 14988 song name words + 527 playlist words + 12 rest continuous variables
+sum(beta[29317:29328] != 0) # 7 continuous variables are selected
+sum(beta[28791:29316] != 0) # 224 playlist words are selected 
+sum(beta[13803:28790] != 0) # 200 song name words are selected
+sum(beta[13775:13802] != 0) # 12 genre words are selected
+sum(beta[2:13774] != 0) # 532 album words are selected
+
+# overall
+sum(beta !=0)
+```
+
+```{r interpret some words and variables}
+# album words
+o_a <- order(beta[2:13775],decreasing = TRUE)
+kable(beta[2:13775][o_a[1:10]]) # first 10 words
+beta[2:13775][o_a[13765:13775]] # last 10 words
+# some words such as dutty, hooligans, shotta and astroworld are related to gang and bad impression. Since black music/rap/hip hop are very popular in the U.S., it is true that album name with those words will attrack more listeners and thus gaining more popularity.
+
+
+# genere words
+o_g <- order(beta[13776:13803], decreasing = TRUE)
+kable(beta[13776:13803][o_g[1:10]]) # only 5 are positively contributed/8 are negatively contributed
+# people love hip hop/dance pop/trap/ggaeton/urban contemporary, poeple don't like
+# new jack swing/progressive electro house. It can be conclude that subgenre with more popularity will get higher listeners as new and small subgenre has less popularity and thus less listeners.
+
+# song name words
+o_s <- order(beta[13804:28789], decreasing = T)
+kable(beta[13804:28789][o_s[1:10]]) # highest 10 words
+# it seems like songs with name containing remaster or usa or dream typically has higher popularity than those songs which do not have those words. This could be interpret as people believe songs that are remastered have higher quality than non-remastered version. Also, since the american culture has big influence on hip pop or pop music, it is not surprising that usa or dream has large positive contribute to the popularity of a song.
+
+# playlist words
+o_p <- order(beta[28790:29317], decreasing = T)
+kable(beta[28790:29317][o_p[1:10]])
+# One hypothesis is that the users are mostly from Canada, therefore, if a playlist contain word canadian, the songs in that playlist will gain more popularity. Additionally, from rapcaviar, teen, nights and 00s, we know that Spofity are mostly used by younger generation. Since VIP is also on the list, it suggests that the users are not only young, but also has higher income(?)
+
+
+o_c <- order(beta[29317:29328], decreasing = T)
+kable(beta[29317:29328][o_c[1:12]])
+```
+
+
+
+```{r CV lasso}
+cv.fit <- cv.gamlr(spm_comb, Y, family = "gaussian")
+plot(cv.fit)
+
+# OOS R2
+1-min(cv.fit$cvm)/cv.fit$cvm[1]
+# OOS R2 is 0.3490, slightly lower than IS R2, but not much lower. 
+
+beta_cvmin<-coef(cv.fit, select="min")
+sum(beta_cvmin[,1] != 0) # under the minimum selection rule: 3576 variables
+
+beta_cv <- coef(cv.fit)
+sum(beta_cv[,1] != 0) # under the 1st selection rule: 1868 variables
+
+## lambda value that minimize the OOS deviance
+cv.fit$lambda.min # lambda = 0.1609
+
+plot(predict(cv.fit, spm_comb),Y)
+plot(predict(lasso1, spm_comb),Y)
+```
+
+
+
+
+
+
