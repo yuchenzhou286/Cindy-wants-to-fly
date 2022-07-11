@@ -1,5 +1,5 @@
 This project is the final project of BUS 41200 Big Data at Booth, University of chicago.
-This project is done by my group members Kemin Wang, Zihan Zhu and me. 
+I cooperated with my group members Kemin Wang and Zihan Zhu. 
 
 Below are the general introduction of our project and the main questions that we have tried to answer. 
 
